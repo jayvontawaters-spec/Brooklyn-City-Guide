@@ -1,0 +1,28 @@
+kind = "web"
+previewPath = "/"
+title = "Brooklyn, New York"
+description = "A responsive one-page guide to Brooklyn with local food, quick facts, a New York state bird interaction, and a visitor-created favorites list."
+version = "1.0.0"
+id = "artifacts/brooklyn-guide"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 22154
+
+[services.development]
+run = "pnpm --filter @workspace/brooklyn-guide run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/brooklyn-guide", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/brooklyn-guide/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "22154"
+BASE_PATH = "/"

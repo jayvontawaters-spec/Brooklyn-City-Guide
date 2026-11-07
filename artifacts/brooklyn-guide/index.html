@@ -130,6 +130,76 @@
         </div>
       </section>
 
+      <section class="chat-section" id="ask-the-guide" aria-labelledby="chat-title">
+        <div class="chat-heading">
+          <p class="eyebrow">LOCAL KNOW-HOW, ON DEMAND</p>
+          <h2 id="chat-title">ASK THE<br><em>GUIDE</em><span class="period">.</span></h2>
+          <p>Ask about Brooklyn, pizza, or the little details that make this borough itself.</p>
+        </div>
+
+        <div class="chat-grid">
+          <div class="chat-panel">
+            <div class="chat-panel-heading">
+              <span class="chat-status-dot" aria-hidden="true"></span>
+              <div>
+                <strong>Your Brooklyn guide</strong>
+                <span>Friendly local tips, grounded in this page</span>
+              </div>
+            </div>
+            <div
+              id="chat-transcript"
+              class="chat-transcript"
+              role="log"
+              aria-label="Conversation with the Brooklyn city guide"
+              aria-live="polite"
+              aria-relevant="additions text"
+            ></div>
+            <form id="chat-form" class="chat-form">
+              <label for="chat-input">What would you like to know?</label>
+              <div class="chat-input-row">
+                <textarea
+                  id="chat-input"
+                  name="message"
+                  rows="2"
+                  maxlength="2000"
+                  placeholder="What should I eat first?"
+                  required
+                ></textarea>
+                <button id="chat-submit" type="submit">Ask <span aria-hidden="true">↗</span></button>
+              </div>
+              <p id="chat-status" class="chat-status" role="alert" hidden></p>
+            </form>
+          </div>
+
+          <aside class="prompt-lab" aria-labelledby="prompt-lab-title">
+            <p class="eyebrow">TUNE THE ANSWER</p>
+            <h3 id="prompt-lab-title">PROMPT LAB<span class="period">.</span></h3>
+            <p class="prompt-lab-intro">Adjust how the guide responds. Your settings are sent with each question.</p>
+
+            <div class="range-control">
+              <label for="temperature-control">Temperature <output id="temperature-value" for="temperature-control">1.0</output></label>
+              <input id="temperature-control" type="range" min="0" max="2" step="0.1" value="1">
+              <div class="range-scale"><span>Focused</span><span>Playful</span></div>
+            </div>
+            <div class="range-control">
+              <label for="max-tokens-control">Max output tokens <output id="max-tokens-value" for="max-tokens-control">300</output></label>
+              <input id="max-tokens-control" type="range" min="32" max="1024" step="1" value="300">
+              <div class="range-scale"><span>32</span><span>1024</span></div>
+            </div>
+            <div class="range-control">
+              <label for="top-p-control">Top-p <output id="top-p-value" for="top-p-control">0.95</output></label>
+              <input id="top-p-control" type="range" min="0" max="1" step="0.01" value="0.95">
+              <div class="range-scale"><span>Focused</span><span>Varied</span></div>
+            </div>
+
+            <details class="system-prompt-box">
+              <summary>View the system prompt</summary>
+              <pre id="system-prompt-text">Loading the city guide prompt…</pre>
+            </details>
+          </aside>
+        </div>
+      </section>
+
       <footer class="footer">
         <a class="wordmark" href="#" aria-label="Back to top">BK<span> / </span>NY</a>
         <p>Take your time. Brooklyn isn’t going anywhere.</p>

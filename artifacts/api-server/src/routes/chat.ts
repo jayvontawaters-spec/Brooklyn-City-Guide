@@ -15,6 +15,10 @@ const DEFAULT_SETTINGS = {
   maxOutputTokens: 300,
 } as const;
 
+// Keep billable model work bounded even when requests come from many IPs.
+const MAX_CONCURRENT_GEMINI_REQUESTS = 4;
+let activeGeminiRequests = 0;
+
 function isRetryableGeminiError(error: unknown): boolean {
   if (typeof error !== "object" || error === null || !("status" in error)) {
     return false;
@@ -64,6 +68,13 @@ router.post("/chat", async (req, res): Promise<void> => {
     return;
   }
 
+  if (activeGeminiRequests >= MAX_CONCURRENT_GEMINI_REQUESTS) {
+    res.set("Retry-After", "1").status(503).json({
+      error: "The city guide is handling other messages. Please try again in a moment.",
+    });
+    return;
+  }
+
   const settings = {
     ...DEFAULT_SETTINGS,
     ...parsed.data.settings,
@@ -74,6 +85,7 @@ router.post("/chat", async (req, res): Promise<void> => {
     parts: [{ text: turn.content }],
   }));
 
+  activeGeminiRequests += 1;
   try {
     const ai = new GoogleGenAI({
       apiKey,
@@ -129,6 +141,8 @@ router.post("/chat", async (req, res): Promise<void> => {
           : "The city guide could not answer just now. Please try again.",
       },
     );
+  } finally {
+    activeGeminiRequests -= 1;
   }
 });
 

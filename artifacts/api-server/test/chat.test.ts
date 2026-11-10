@@ -32,14 +32,19 @@ const DEFAULT_SETTINGS = {
 
 let server: Server;
 let baseUrl: string;
+let clientIp = "198.51.100.1";
+let clientIpSequence = 1;
 const originalGeminiApiKey = process.env.GEMINI_API_KEY;
 const originalLegacyGeminiApiKey = process.env.GEMINI_APY_KEY;
 const originalGeminiModel = process.env.GEMINI_MODEL;
 
-function postChat(body: unknown): Promise<Response> {
+function postChat(body: unknown, ip = clientIp): Promise<Response> {
   return fetch(`${baseUrl}/api/chat`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: {
+      "Content-Type": "application/json",
+      "X-Forwarded-For": ip,
+    },
     body: JSON.stringify(body),
   });
 }
@@ -84,6 +89,7 @@ afterAll(async () => {
 });
 
 beforeEach(() => {
+  clientIp = `198.51.100.${clientIpSequence++}`;
   process.env.GEMINI_API_KEY = "test-gemini-key";
   delete process.env.GEMINI_APY_KEY;
   delete process.env.GEMINI_MODEL;
@@ -130,6 +136,71 @@ describe("city chat API", () => {
       error: "Please check your message and Prompt Lab settings.",
     });
     expect(geminiMock.generateContent).not.toHaveBeenCalled();
+  });
+
+  it("limits each IP to 10 chat requests per minute without limiting the prompt endpoint", async () => {
+    for (let requestNumber = 0; requestNumber < 10; requestNumber += 1) {
+      const response = await postChat({ message: "Tell me about Brooklyn." });
+      expect(response.status).toBe(200);
+    }
+
+    const limitedResponse = await postChat({ message: "One more question." });
+    expect(limitedResponse.status).toBe(429);
+    expect(await limitedResponse.json()).toEqual({
+      error: "You’ve sent too many messages. Please try again in a minute.",
+    });
+    const retryAfter = Number(limitedResponse.headers.get("Retry-After"));
+    expect(retryAfter).toBeGreaterThan(0);
+    expect(retryAfter).toBeLessThanOrEqual(60);
+    expect(geminiMock.generateContent).toHaveBeenCalledTimes(10);
+
+    const otherVisitorResponse = await postChat(
+      { message: "A separate visitor can still chat." },
+      "203.0.113.7",
+    );
+    expect(otherVisitorResponse.status).toBe(200);
+
+    const promptResponse = await fetch(`${baseUrl}/api/chat/system-prompt`, {
+      headers: { "X-Forwarded-For": clientIp },
+    });
+    expect(promptResponse.status).toBe(200);
+    expect(await promptResponse.json()).toEqual({ systemPrompt: CITY_SYSTEM_PROMPT });
+  });
+
+  it("bounds concurrent Gemini work and tells excess requests when to retry", async () => {
+    const pendingGeminiReplies: Array<(value: unknown) => void> = [];
+    geminiMock.generateContent.mockImplementation(
+      () => new Promise((resolve) => pendingGeminiReplies.push(resolve)),
+    );
+
+    const requests = Array.from({ length: 5 }, (_, requestNumber) =>
+      postChat({ message: `Concurrent question ${requestNumber}.` }),
+    );
+    await vi.waitFor(() => {
+      expect(geminiMock.generateContent).toHaveBeenCalledTimes(4);
+    });
+
+    expect(pendingGeminiReplies).toHaveLength(4);
+    pendingGeminiReplies.forEach((resolve) => {
+      resolve({
+        text: "A Brooklyn answer.",
+        candidates: [{ finishReason: "STOP" }],
+        usageMetadata: {
+          promptTokenCount: 10,
+          candidatesTokenCount: 5,
+          totalTokenCount: 15,
+        },
+      });
+    });
+
+    const responses = await Promise.all(requests);
+    expect(responses.filter((response) => response.status === 200)).toHaveLength(4);
+    const busyResponse = responses.find((response) => response.status === 503);
+    expect(busyResponse).toBeDefined();
+    expect(busyResponse?.headers.get("Retry-After")).toBe("1");
+    expect(await busyResponse?.json()).toEqual({
+      error: "The city guide is handling other messages. Please try again in a moment.",
+    });
   });
 
   it("returns exact setup guidance when neither supported key is configured", async () => {

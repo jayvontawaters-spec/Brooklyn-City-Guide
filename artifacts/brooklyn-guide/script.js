@@ -269,3 +269,288 @@ chatForm.addEventListener("submit", async (event) => {
 });
 
 renderChat();
+
+// Dish photos are stored in the database, unlike the visitor's temporary chat.
+const MAX_DISH_IMAGE_BYTES = 3 * 1024 * 1024;
+const MAX_DISH_IMAGE_SIDE = 1280;
+const ALLOWED_DISH_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
+const dishUploadForm = document.querySelector("#dish-upload-form");
+const dishTitleInput = document.querySelector("#dish-title");
+const dishCaptionInput = document.querySelector("#dish-caption");
+const dishImageInput = document.querySelector("#dish-image");
+const dishUploadButton = document.querySelector("#dish-upload-button");
+const dishUploadStatus = document.querySelector("#dish-upload-status");
+const dishPreviewWrap = document.querySelector("#dish-preview-wrap");
+const dishPreview = document.querySelector("#dish-preview");
+const dishGalleryGrid = document.querySelector("#dish-gallery-grid");
+const dishGalleryStatus = document.querySelector("#dish-gallery-status");
+const dishPhotoCount = document.querySelector("#dish-photo-count");
+let dishPhotos = [];
+let dishPreviewUrl = null;
+
+function dishFileMimeType(file) {
+  if (ALLOWED_DISH_TYPES.has(file.type)) return file.type;
+
+  const extension = file.name.toLowerCase().split(".").pop();
+  const extensionTypes = {
+    jpg: "image/jpeg",
+    jpeg: "image/jpeg",
+    png: "image/png",
+    webp: "image/webp",
+  };
+  return extensionTypes[extension] || file.type;
+}
+
+function setDishUploadMessage(message, kind = "") {
+  dishUploadStatus.textContent = message;
+  if (kind) {
+    dishUploadStatus.dataset.kind = kind;
+  } else {
+    delete dishUploadStatus.dataset.kind;
+  }
+}
+
+function clearDishPreview() {
+  if (dishPreviewUrl) URL.revokeObjectURL(dishPreviewUrl);
+  dishPreviewUrl = null;
+  dishPreview.removeAttribute("src");
+  dishPreviewWrap.hidden = true;
+}
+
+dishImageInput.addEventListener("change", () => {
+  setDishUploadMessage("");
+  clearDishPreview();
+
+  const file = dishImageInput.files?.[0];
+  if (!file) return;
+
+  if (!ALLOWED_DISH_TYPES.has(dishFileMimeType(file))) {
+    dishImageInput.value = "";
+    setDishUploadMessage("Please choose a JPEG, PNG, or WebP photo.", "error");
+    return;
+  }
+
+  if (file.size > MAX_DISH_IMAGE_BYTES) {
+    dishImageInput.value = "";
+    setDishUploadMessage("That photo is over 3 MB. Choose a smaller image.", "error");
+    return;
+  }
+
+  dishPreviewUrl = URL.createObjectURL(file);
+  dishPreview.src = dishPreviewUrl;
+  dishPreviewWrap.hidden = false;
+});
+
+async function openDishImage(file) {
+  if (typeof createImageBitmap === "function") {
+    return createImageBitmap(file);
+  }
+
+  const imageUrl = URL.createObjectURL(file);
+  try {
+    const image = new Image();
+    image.src = imageUrl;
+    await image.decode();
+    return image;
+  } finally {
+    URL.revokeObjectURL(imageUrl);
+  }
+}
+
+function canvasToBlob(canvas, mimeType) {
+  return new Promise((resolve, reject) => {
+    canvas.toBlob(
+      (blob) => {
+        if (blob) {
+          resolve(blob);
+        } else {
+          reject(new Error("This photo could not be prepared. Try another image."));
+        }
+      },
+      mimeType,
+      mimeType === "image/png" ? undefined : 0.84,
+    );
+  });
+}
+
+function blobToDataUrl(blob) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result === "string") {
+        resolve(reader.result);
+      } else {
+        reject(new Error("This photo could not be read. Try another image."));
+      }
+    };
+    reader.onerror = () => reject(new Error("This photo could not be read. Try another image."));
+    reader.readAsDataURL(blob);
+  });
+}
+
+async function resizeDishImage(file) {
+  const image = await openDishImage(file);
+  const largestSide = Math.max(image.width, image.height);
+  const scale = Math.min(1, MAX_DISH_IMAGE_SIDE / largestSide);
+  const canvas = document.createElement("canvas");
+  canvas.width = Math.max(1, Math.round(image.width * scale));
+  canvas.height = Math.max(1, Math.round(image.height * scale));
+
+  const context = canvas.getContext("2d");
+  if (!context) {
+    if (typeof image.close === "function") image.close();
+    throw new Error("This photo could not be resized in your browser.");
+  }
+
+  // Give transparent PNGs a white background if the browser converts the file.
+  context.fillStyle = "#ffffff";
+  context.fillRect(0, 0, canvas.width, canvas.height);
+  context.drawImage(image, 0, 0, canvas.width, canvas.height);
+  if (typeof image.close === "function") image.close();
+
+  const blob = await canvasToBlob(canvas, dishFileMimeType(file));
+  if (!ALLOWED_DISH_TYPES.has(blob.type)) {
+    throw new Error("This browser could not prepare that image type. Try a JPEG, PNG, or WebP.");
+  }
+  if (blob.size > MAX_DISH_IMAGE_BYTES) {
+    throw new Error("This photo is still over 3 MB after resizing. Choose a smaller image.");
+  }
+
+  return blobToDataUrl(blob);
+}
+
+function formatDishDate(dateValue) {
+  const date = new Date(dateValue);
+  if (Number.isNaN(date.getTime())) return "RECENTLY ADDED";
+  return `ADDED ${date.toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  }).toUpperCase()}`;
+}
+
+function renderDishGallery() {
+  dishGalleryGrid.replaceChildren();
+  const count = dishPhotos.length;
+  dishPhotoCount.textContent = `${count} ${count === 1 ? "PHOTO" : "PHOTOS"}`;
+
+  if (count === 0) {
+    dishGalleryStatus.textContent = "No slices in the gallery yet. Add the first one.";
+    return;
+  }
+
+  dishGalleryStatus.textContent = "";
+  dishPhotos.forEach((photo) => {
+    const card = document.createElement("article");
+    card.className = "dish-card";
+
+    const figure = document.createElement("figure");
+    const image = document.createElement("img");
+    image.className = "dish-card-image";
+    image.src = photo.imageUrl;
+    image.alt = `${photo.title}${photo.caption ? `: ${photo.caption}` : ""}`;
+    image.loading = "lazy";
+    image.decoding = "async";
+
+    const dateCaption = document.createElement("figcaption");
+    dateCaption.textContent = formatDishDate(photo.createdAt);
+    figure.append(image, dateCaption);
+
+    const copy = document.createElement("div");
+    copy.className = "dish-card-copy";
+    const title = document.createElement("h4");
+    title.textContent = photo.title;
+    copy.append(title);
+
+    if (photo.caption) {
+      const caption = document.createElement("p");
+      caption.textContent = photo.caption;
+      copy.append(caption);
+    }
+
+    card.append(figure, copy);
+    dishGalleryGrid.append(card);
+  });
+}
+
+async function loadDishPhotos() {
+  dishGalleryStatus.textContent = "Loading the neighborhood’s favorites…";
+  dishPhotoCount.textContent = "LOADING PHOTOS";
+
+  try {
+    const response = await fetch("/api/dishes");
+    const data = await response.json();
+    if (!response.ok) {
+      throw new Error(data.error || "The gallery could not be loaded.");
+    }
+    dishPhotos = data;
+    renderDishGallery();
+  } catch (error) {
+    dishPhotoCount.textContent = "GALLERY UNAVAILABLE";
+    dishGalleryStatus.textContent =
+      error.message || "The gallery could not be loaded. Try refreshing the page.";
+  }
+}
+
+dishUploadForm.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const file = dishImageInput.files?.[0];
+  const title = dishTitleInput.value.trim();
+
+  setDishUploadMessage("");
+  if (!title) {
+    setDishUploadMessage("Add a short title for your photo.", "error");
+    dishTitleInput.focus();
+    return;
+  }
+  if (!file) {
+    setDishUploadMessage("Choose a JPEG, PNG, or WebP photo first.", "error");
+    dishImageInput.focus();
+    return;
+  }
+  if (!ALLOWED_DISH_TYPES.has(dishFileMimeType(file))) {
+    setDishUploadMessage("Please choose a JPEG, PNG, or WebP photo.", "error");
+    return;
+  }
+  if (file.size > MAX_DISH_IMAGE_BYTES) {
+    setDishUploadMessage("That photo is over 3 MB. Choose a smaller image.", "error");
+    return;
+  }
+
+  dishUploadButton.disabled = true;
+  dishUploadButton.textContent = "Preparing photo…";
+
+  try {
+    const image = await resizeDishImage(file);
+    const caption = dishCaptionInput.value.trim();
+    const payload = { title, image };
+    if (caption) payload.caption = caption;
+
+    dishUploadButton.textContent = "Uploading…";
+    const response = await fetch("/api/dishes", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    const data = await response.json();
+    if (!response.ok) {
+      throw new Error(data.error || "Your photo could not be saved. Please try again.");
+    }
+
+    dishPhotos.unshift(data);
+    renderDishGallery();
+    dishUploadForm.reset();
+    clearDishPreview();
+    setDishUploadMessage("Your photo is at the top of the gallery. Nice one!", "success");
+  } catch (error) {
+    setDishUploadMessage(
+      error.message || "Your photo could not be saved. Please try again.",
+      "error",
+    );
+  } finally {
+    dishUploadButton.disabled = false;
+    dishUploadButton.innerHTML = 'Share to gallery <span aria-hidden="true">↗</span>';
+  }
+});
+
+loadDishPhotos();

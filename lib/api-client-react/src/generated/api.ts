@@ -22,6 +22,8 @@ import type {
 import type {
   ChatRequest,
   ChatResponse,
+  DishPhotoInput,
+  DishPhotoItem,
   ErrorResponse,
   HealthStatus,
   SystemPromptResponse
@@ -296,4 +298,246 @@ export const useSendChatMessage = <TError = ErrorType<ErrorResponse>,
       > => {
       return useMutation(getSendChatMessageMutationOptions(options));
     }
+
+export const getListDishPhotosUrl = () => {
+
+
+
+
+  return `/api/dishes`
+}
+
+/**
+ * @summary List Brooklyn dish photos
+ */
+export const listDishPhotos = async ( options?: Parameters<typeof customFetch>[1]): Promise<DishPhotoItem[]> => {
+
+  return customFetch<DishPhotoItem[]>(getListDishPhotosUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getListDishPhotosQueryKey = () => {
+    return [
+    `/api/dishes`
+    ] as const;
+    }
+
+
+export const getListDishPhotosQueryOptions = <TData = Awaited<ReturnType<typeof listDishPhotos>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listDishPhotos>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getListDishPhotosQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof listDishPhotos>>> = ({ signal }) => listDishPhotos({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof listDishPhotos>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type ListDishPhotosQueryResult = NonNullable<Awaited<ReturnType<typeof listDishPhotos>>>
+export type ListDishPhotosQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary List Brooklyn dish photos
+ */
+
+export function useListDishPhotos<TData = Awaited<ReturnType<typeof listDishPhotos>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof listDishPhotos>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getListDishPhotosQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
+
+export const getCreateDishPhotoUrl = () => {
+
+
+
+
+  return `/api/dishes`
+}
+
+/**
+ * @summary Upload a Brooklyn dish photo
+ */
+export const createDishPhoto = async (dishPhotoInput: DishPhotoInput, options?: Parameters<typeof customFetch>[1]): Promise<DishPhotoItem> => {
+
+    const getHeaders = (h?: NonNullable<RequestInit['headers']>): Record<string, string | readonly string[]> => {
+    if (!h) return {};
+    if (h instanceof Headers) return Object.fromEntries(h.entries());
+    if (Symbol.iterator in h) {
+      return Object.fromEntries(
+        Array.from(h as Iterable<Iterable<string>>, (entry) => Array.from(entry) as [string, string]),
+      );
+    }
+    const headers: Record<string, string | readonly string[]> = {};
+    for (const [name, value] of Object.entries<string | readonly string[] | undefined>(h)) {
+      if (value !== undefined) headers[name] = value;
+    }
+    return headers;
+  };
+return customFetch<DishPhotoItem>(getCreateDishPhotoUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getHeaders(options?.headers) },
+    body: JSON.stringify(dishPhotoInput)
+  }
+);}
+
+
+
+
+
+export const getCreateDishPhotoMutationKey = () => ['createDishPhoto'] as const;
+
+export const getCreateDishPhotoMutationOptions = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createDishPhoto>>, TError,CreateDishPhotoMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof createDishPhoto>>, TError,CreateDishPhotoMutationVariables, TContext> => {
+
+const mutationKey = getCreateDishPhotoMutationKey();
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof createDishPhoto>>, CreateDishPhotoMutationVariables> = (props) => {
+          const {data} = props ?? {};
+
+          return  createDishPhoto(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type CreateDishPhotoMutationResult = NonNullable<Awaited<ReturnType<typeof createDishPhoto>>>
+    export type CreateDishPhotoMutationBody = BodyType<DishPhotoInput>
+    export type CreateDishPhotoMutationError = ErrorType<ErrorResponse>
+    export type CreateDishPhotoMutationVariables = {data: BodyType<DishPhotoInput>}
+
+    /**
+ * @summary Upload a Brooklyn dish photo
+ */
+export const useCreateDishPhoto = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof createDishPhoto>>, TError,CreateDishPhotoMutationVariables, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof createDishPhoto>>,
+        TError,
+        CreateDishPhotoMutationVariables,
+        TContext
+      > => {
+      return useMutation(getCreateDishPhotoMutationOptions(options));
+    }
+
+export const getGetDishPhotoImageUrl = (id: number,) => {
+
+
+
+
+  return `/api/dishes/${id}/image`
+}
+
+/**
+ * @summary Get a dish photo image
+ */
+export const getDishPhotoImage = async (id: number, options?: Parameters<typeof customFetch>[1]): Promise<Blob> => {
+
+  return customFetch<Blob>(getGetDishPhotoImageUrl(id),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetDishPhotoImageQueryKey = (id: number,) => {
+    return [
+    `/api/dishes/${id}/image`
+    ] as const;
+    }
+
+
+export const getGetDishPhotoImageQueryOptions = <TData = Awaited<ReturnType<typeof getDishPhotoImage>>, TError = ErrorType<ErrorResponse>>(id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getDishPhotoImage>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetDishPhotoImageQueryKey(id);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getDishPhotoImage>>> = ({ signal }) => getDishPhotoImage(id, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: id !== null && id !== undefined, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getDishPhotoImage>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetDishPhotoImageQueryResult = NonNullable<Awaited<ReturnType<typeof getDishPhotoImage>>>
+export type GetDishPhotoImageQueryError = ErrorType<ErrorResponse>
+
+
+/**
+ * @summary Get a dish photo image
+ */
+
+export function useGetDishPhotoImage<TData = Awaited<ReturnType<typeof getDishPhotoImage>>, TError = ErrorType<ErrorResponse>>(
+ id: number, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getDishPhotoImage>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetDishPhotoImageQueryOptions(id,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return withQueryKey(query, queryOptions.queryKey);
+}
+
+
+
+
+
+
 

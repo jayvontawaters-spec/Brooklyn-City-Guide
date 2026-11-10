@@ -1,0 +1,1 @@
+- [Dish photo persistence](dish-photo-persistence.md) — keep uploads in PostgreSQL `image_base64` per the supplied schema; don't switch storage without approval.

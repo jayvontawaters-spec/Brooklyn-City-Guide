@@ -65,6 +65,63 @@
         </div>
       </section>
 
+      <section class="dish-gallery-section" id="dish-gallery" aria-labelledby="dish-gallery-title">
+        <div class="dish-gallery-intro">
+          <div>
+            <p class="eyebrow">THE COMMUNITY TABLE</p>
+            <h2 id="dish-gallery-title">A SLICE<br>OF <em>US</em><span class="period">.</span></h2>
+          </div>
+          <p>Every block has a favorite pie. Share the slice you love and add it to Brooklyn’s growing corner of the internet.</p>
+        </div>
+
+        <div class="dish-upload-card">
+          <div class="dish-upload-copy">
+            <span class="dish-upload-index">04 / SHARE</span>
+            <h3>ADD YOUR<br>SLICE.</h3>
+            <p>Bring a photo from your camera roll. We’ll resize it before it joins the gallery.</p>
+          </div>
+
+          <form id="dish-upload-form" class="dish-upload-form">
+            <div class="dish-form-grid">
+              <div class="dish-field">
+                <label for="dish-title">Photo title</label>
+                <input id="dish-title" name="title" type="text" maxlength="100" placeholder="Sunday’s corner slice" required>
+              </div>
+              <div class="dish-field">
+                <label for="dish-caption">Caption <span>OPTIONAL</span></label>
+                <textarea id="dish-caption" name="caption" rows="2" maxlength="500" placeholder="Where did you find it?"></textarea>
+              </div>
+            </div>
+
+            <div class="dish-field dish-file-field">
+              <label for="dish-image">Choose a dish photo</label>
+              <input id="dish-image" name="image" type="file" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp" required>
+              <p>JPEG, PNG, or WebP · up to 3 MB · resized to 1280 px before upload</p>
+            </div>
+
+            <figure id="dish-preview-wrap" class="dish-preview-wrap" hidden>
+              <img id="dish-preview" alt="Preview of the selected Brooklyn dish photo">
+              <figcaption>READY FOR THE GALLERY</figcaption>
+            </figure>
+
+            <div class="dish-form-actions">
+              <p id="dish-upload-status" role="status" aria-live="polite"></p>
+              <button id="dish-upload-button" type="submit">Share to gallery <span aria-hidden="true">↗</span></button>
+            </div>
+          </form>
+        </div>
+
+        <div class="dish-gallery-heading">
+          <div>
+            <p class="eyebrow">FRESH FROM THE NEIGHBORHOOD</p>
+            <h3>THE GALLERY<span class="period">.</span></h3>
+          </div>
+          <span id="dish-photo-count" class="dish-photo-count">LOADING PHOTOS</span>
+        </div>
+        <p id="dish-gallery-status" class="dish-gallery-status" role="status" aria-live="polite">Loading the neighborhood’s favorites…</p>
+        <div id="dish-gallery-grid" class="dish-gallery-grid"></div>
+      </section>
+
       <section class="facts-section" aria-labelledby="facts-title">
         <div class="section-aside"><span class="section-number">02 / KNOW</span><span class="aside-rule"></span><span>THREE THINGS</span></div>
         <div class="facts-main">

@@ -86,3 +86,59 @@ export const SendChatMessageResponse = zod.object({
 })
 
 
+/**
+ * @summary List Brooklyn dish photos
+ */
+export const ListDishPhotosResponseItem = zod.object({
+  "id": zod.number().int(),
+  "title": zod.string(),
+  "caption": zod.string(),
+  "mimeType": zod.enum(['image/jpeg', 'image/png', 'image/webp']),
+  "createdAt": zod.coerce.date(),
+  "imageUrl": zod.string()
+})
+export const ListDishPhotosResponse = zod.array(ListDishPhotosResponseItem)
+
+
+/**
+ * @summary Upload a Brooklyn dish photo
+ */
+export const createDishPhotoBodyTitleMax = 100;
+
+export const createDishPhotoBodyCaptionMax = 500;
+
+export const createDishPhotoBodyImageMax = 4194400;
+
+
+export const createDishPhotoBodyImageRegExp = new RegExp('^data:image/(jpeg|png|webp);base64,[A-Za-z0-9+/]+={0,2}$');
+
+
+export const CreateDishPhotoBody = zod.object({
+  "title": zod.string().min(1).max(createDishPhotoBodyTitleMax),
+  "caption": zod.string().max(createDishPhotoBodyCaptionMax).optional(),
+  "image": zod.string().max(createDishPhotoBodyImageMax).regex(createDishPhotoBodyImageRegExp)
+})
+
+export const CreateDishPhotoResponse = zod.object({
+  "id": zod.number().int(),
+  "title": zod.string(),
+  "caption": zod.string(),
+  "mimeType": zod.enum(['image/jpeg', 'image/png', 'image/webp']),
+  "createdAt": zod.coerce.date(),
+  "imageUrl": zod.string()
+})
+
+
+/**
+ * @summary Get a dish photo image
+ */
+
+
+
+export const GetDishPhotoImageParams = zod.object({
+  "id": zod.coerce.number().int().min(1)
+})
+
+export const GetDishPhotoImageResponse = zod.unknown()
+
+

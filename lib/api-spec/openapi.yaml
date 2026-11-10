@@ -12,6 +12,8 @@ tags:
     description: Health operations
   - name: chat
     description: Brooklyn city guide chat
+  - name: dishes
+    description: Brooklyn dish photo gallery
 paths:
   /healthz:
     get:
@@ -70,6 +72,89 @@ paths:
                 $ref: "#/components/schemas/ErrorResponse"
         "503":
           description: Gemini API key is not configured
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /dishes:
+    get:
+      operationId: listDishPhotos
+      tags: [dishes]
+      summary: List Brooklyn dish photos
+      responses:
+        "200":
+          description: Dish photos, newest first
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/DishPhotoItem"
+    post:
+      operationId: createDishPhoto
+      tags: [dishes]
+      summary: Upload a Brooklyn dish photo
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DishPhotoInput"
+      responses:
+        "201":
+          description: The saved dish photo
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DishPhotoItem"
+        "400":
+          description: Invalid title or image data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "413":
+          description: Image request is too large
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "415":
+          description: Unsupported image type
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /dishes/{id}/image:
+    get:
+      operationId: getDishPhotoImage
+      tags: [dishes]
+      summary: Get a dish photo image
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+      responses:
+        "200":
+          description: The image bytes
+          content:
+            image/jpeg:
+              schema:
+                type: string
+                format: binary
+            image/png:
+              schema:
+                type: string
+                format: binary
+            image/webp:
+              schema:
+                type: string
+                format: binary
+        "404":
+          description: Dish photo not found
           content:
             application/json:
               schema:
@@ -173,4 +258,46 @@ components:
           type: string
       required:
         - error
+    DishPhotoInput:
+      type: object
+      additionalProperties: false
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 100
+        caption:
+          type: string
+          maxLength: 500
+        image:
+          type: string
+          maxLength: 4194400
+          pattern: '^data:image/(jpeg|png|webp);base64,[A-Za-z0-9+/]+={0,2}$'
+      required:
+        - title
+        - image
+    DishPhotoItem:
+      type: object
+      properties:
+        id:
+          type: integer
+        title:
+          type: string
+        caption:
+          type: string
+        mimeType:
+          type: string
+          enum: [image/jpeg, image/png, image/webp]
+        createdAt:
+          type: string
+          format: date-time
+        imageUrl:
+          type: string
+      required:
+        - id
+        - title
+        - caption
+        - mimeType
+        - createdAt
+        - imageUrl
 

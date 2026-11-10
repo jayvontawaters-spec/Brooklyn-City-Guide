@@ -74,3 +74,36 @@ export interface ErrorResponse {
   error: string;
 }
 
+export interface DishPhotoInput {
+  /**
+     * @minLength 1
+     * @maxLength 100
+     */
+  title: string;
+  /** @maxLength 500 */
+  caption?: string;
+  /**
+     * @maxLength 4194400
+     * @pattern ^data:image/(jpeg|png|webp);base64,[A-Za-z0-9+/]+={0,2}$
+     */
+  image: string;
+}
+
+export type DishPhotoItemMimeType = typeof DishPhotoItemMimeType[keyof typeof DishPhotoItemMimeType];
+
+
+export const DishPhotoItemMimeType = {
+  'image/jpeg': 'image/jpeg',
+  'image/png': 'image/png',
+  'image/webp': 'image/webp',
+} as const;
+
+export interface DishPhotoItem {
+  id: number;
+  title: string;
+  caption: string;
+  mimeType: DishPhotoItemMimeType;
+  createdAt: string;
+  imageUrl: string;
+}
+

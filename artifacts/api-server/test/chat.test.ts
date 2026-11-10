@@ -216,6 +216,61 @@ describe("city chat API", () => {
     expect(geminiMock.GoogleGenAI).not.toHaveBeenCalled();
   });
 
+  it.each([503, 504])(
+    "retries a temporary Gemini %i failure and returns the answer",
+    async (status) => {
+      geminiMock.generateContent
+        .mockRejectedValueOnce(Object.assign(new Error("Temporary Gemini failure"), { status }))
+        .mockResolvedValueOnce({
+          text: "Try a neighborhood slice shop.",
+          candidates: [{ finishReason: "STOP" }],
+          usageMetadata: {
+            promptTokenCount: 18,
+            candidatesTokenCount: 9,
+            totalTokenCount: 27,
+          },
+        });
+
+      const response = await postChat({ message: "Where should I get pizza?" });
+
+      expect(response.status).toBe(200);
+      expect((await response.json()).reply).toBe("Try a neighborhood slice shop.");
+      expect(geminiMock.generateContent).toHaveBeenCalledTimes(2);
+    },
+  );
+
+  it("returns temporary-unavailability guidance after both Gemini attempts fail", async () => {
+    const temporaryFailure = Object.assign(
+      new Error("Gemini is temporarily unavailable"),
+      { status: 503 },
+    );
+    geminiMock.generateContent
+      .mockRejectedValueOnce(temporaryFailure)
+      .mockRejectedValueOnce(temporaryFailure);
+
+    const response = await postChat({ message: "Where should I get pizza?" });
+
+    expect(response.status).toBe(503);
+    expect(await response.json()).toEqual({
+      error: "The city guide is temporarily busy. Please try again in a moment.",
+    });
+    expect(geminiMock.generateContent).toHaveBeenCalledTimes(2);
+  });
+
+  it("returns generic retry guidance without retrying a non-retryable Gemini failure", async () => {
+    geminiMock.generateContent.mockRejectedValue(
+      Object.assign(new Error("Gemini rejected the request"), { status: 400 }),
+    );
+
+    const response = await postChat({ message: "Where should I get pizza?" });
+
+    expect(response.status).toBe(502);
+    expect(await response.json()).toEqual({
+      error: "The city guide could not answer just now. Please try again.",
+    });
+    expect(geminiMock.generateContent).toHaveBeenCalledTimes(1);
+  });
+
   it("uses default settings and returns the model's usage counts", async () => {
     const response = await postChat({ message: "Where should I get pizza?" });
     const body = await response.json();
